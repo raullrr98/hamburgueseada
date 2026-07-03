@@ -152,6 +152,101 @@
     color:#6b5847;
     text-align:center;
   }
+
+  /* Aviso de confirmación */
+  .overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(20,14,10,0.72);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    z-index:50;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 0.18s ease;
+  }
+  .overlay.visible{
+    opacity:1;
+    pointer-events:auto;
+  }
+  .aviso{
+    background:var(--carbon-2);
+    border:1px solid var(--lechuga);
+    border-radius:6px;
+    padding:28px 24px;
+    max-width:340px;
+    text-align:center;
+    transform:scale(0.9);
+    transition:transform 0.18s ease;
+  }
+  .overlay.visible .aviso{ transform:scale(1); }
+  .aviso .check{
+    font-size:38px;
+    display:block;
+    margin-bottom:10px;
+  }
+  .aviso .titulo{
+    font-family:Georgia, serif;
+    font-size:19px;
+    color:var(--lechuga);
+    margin-bottom:6px;
+  }
+  .aviso .detalle{
+    font-size:13px;
+    color:var(--hueso);
+    line-height:1.5;
+  }
+  .aviso button{
+    margin-top:18px;
+    background:var(--lechuga);
+    color:var(--carbon);
+  }
+  .aviso button:hover{ background:#8fb35c; }
+
+  /* Historial personal */
+  .historial{
+    margin-top:22px;
+  }
+  .historial h2{
+    font-family:Georgia, serif;
+    font-size:15px;
+    color:var(--mostaza);
+    margin:0 0 4px;
+  }
+  .historial .subtotal{
+    font-size:12px;
+    color:#b8a48f;
+    margin-bottom:12px;
+  }
+  .historial .subtotal strong{ color:var(--hueso); }
+  .fila-historial{
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    padding:9px 0;
+    border-bottom:1px solid var(--linea);
+    font-size:13px;
+  }
+  .fila-historial:last-child{ border-bottom:none; }
+  .fila-historial .quien{ color:var(--hueso); }
+  .fila-historial .cuando{
+    font-size:10px;
+    color:#6b5847;
+    display:block;
+  }
+  .fila-historial .cant{
+    color:var(--brasa);
+    font-weight:bold;
+    white-space:nowrap;
+  }
+  .historial-vacio{
+    font-size:12px;
+    color:#6b5847;
+    text-align:center;
+    padding:10px 0;
+  }
 </style>
 </head>
 <body>
@@ -167,7 +262,7 @@
     <input id="vendedor" type="text" placeholder="Ej: Raul" autocomplete="off">
 
     <label for="comprador">Se la vendiste a</label>
-    <input id="comprador" type="text" placeholder="Ej: Graciela" autocomplete="off">
+    <input id="comprador" type="text" placeholder="Ej: Juan" autocomplete="off">
 
     <label for="cantidad">Cuántas hamburguesas</label>
     <input id="cantidad" type="number" min="1" step="1" placeholder="Ej: 5" autocomplete="off">
@@ -182,14 +277,33 @@
     </div>
   </div>
 
+  <div class="panel historial">
+    <h2>Tu historial</h2>
+    <div class="subtotal">Vendiste en total: <strong id="subtotalPersonal">0</strong> hamburguesas</div>
+    <div id="listaHistorial">
+      <div class="historial-vacio">Todavía no cargaste ninguna venta.</div>
+    </div>
+  </div>
+
   <div class="config">
     Conectado a la planilla de la hamburgueseada
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="aviso">
+    <span class="check">✅</span>
+    <div class="titulo">¡Venta cargada!</div>
+    <div class="detalle" id="detalleAviso"></div>
+    <button onclick="cerrarAviso()">Listo</button>
   </div>
 </div>
 
 <script>
   // Pegá acá la URL que te dio Apps Script al implementar (paso 8 de las instrucciones)
   const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbxaC4h4YLGkPumV0UtIe3NitixSJ3U7B0WVOqLwWrrQ0qwY13OzXvc6_SzQY8e5Mjo3sw/exec";
+  const CLAVE_HISTORIAL = "hamburgueseada_historial";
+  let enviando = false; // freno extra contra doble clic / doble tap
 
   async function cargarTotal() {
     if (URL_SCRIPT.includes("PEGAR_URL_AQUI")) return;
@@ -204,7 +318,56 @@
     }
   }
 
+  function obtenerHistorial() {
+    try {
+      return JSON.parse(localStorage.getItem(CLAVE_HISTORIAL)) || [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function guardarEnHistorial(entrada) {
+    const historial = obtenerHistorial();
+    historial.unshift(entrada); // el más nuevo arriba
+    localStorage.setItem(CLAVE_HISTORIAL, JSON.stringify(historial));
+    pintarHistorial();
+  }
+
+  function pintarHistorial() {
+    const historial = obtenerHistorial();
+    const lista = document.getElementById('listaHistorial');
+    const subtotal = historial.reduce((acc, item) => acc + item.cantidad, 0);
+    document.getElementById('subtotalPersonal').textContent = subtotal;
+
+    if (historial.length === 0) {
+      lista.innerHTML = '<div class="historial-vacio">Todavía no cargaste ninguna venta.</div>';
+      return;
+    }
+
+    lista.innerHTML = historial.map(item => `
+      <div class="fila-historial">
+        <div class="quien">
+          A ${item.comprador}
+          <span class="cuando">${item.fechaTexto}</span>
+        </div>
+        <div class="cant">${item.cantidad}</div>
+      </div>
+    `).join('');
+  }
+
+  function mostrarAviso(vendedor, comprador, cantidad) {
+    document.getElementById('detalleAviso').textContent =
+      `${vendedor} le vendió ${cantidad} hamburguesa${cantidad == 1 ? '' : 's'} a ${comprador}.`;
+    document.getElementById('overlay').classList.add('visible');
+  }
+
+  function cerrarAviso() {
+    document.getElementById('overlay').classList.remove('visible');
+  }
+
   async function enviarVenta() {
+    if (enviando) return; // ya hay un envío en curso, ignoramos el tap extra
+
     const vendedor = document.getElementById('vendedor').value.trim();
     const comprador = document.getElementById('comprador').value.trim();
     const cantidad = document.getElementById('cantidad').value;
@@ -226,6 +389,7 @@
       return;
     }
 
+    enviando = true;
     boton.disabled = true;
     boton.textContent = 'Cargando...';
 
@@ -239,9 +403,17 @@
       const datos = await resp.json();
 
       if (datos.ok) {
-        mensaje.textContent = `¡Cargado! ${vendedor} le vendió ${cantidad} a ${comprador}.`;
-        mensaje.className = 'mensaje ok';
+        mensaje.textContent = '';
         document.getElementById('totalNum').textContent = datos.total;
+
+        guardarEnHistorial({
+          comprador,
+          cantidad: Number(cantidad),
+          fechaTexto: new Date().toLocaleString('es-AR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })
+        });
+
+        mostrarAviso(vendedor, comprador, cantidad);
+
         document.getElementById('comprador').value = '';
         document.getElementById('cantidad').value = '';
       } else {
@@ -252,12 +424,14 @@
       mensaje.textContent = 'No se pudo conectar con la planilla.';
       mensaje.className = 'mensaje error';
     } finally {
+      enviando = false;
       boton.disabled = false;
       boton.textContent = 'Cargar venta';
     }
   }
 
   cargarTotal();
+  pintarHistorial();
 </script>
 </body>
 </html>
