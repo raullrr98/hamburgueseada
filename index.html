@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hamburgueseada a beneficio</title>
+<style>
+  :root{
+    --carbon:#241a14;
+    --carbon-2:#332419;
+    --brasa:#e2521e;
+    --mostaza:#e8a93b;
+    --lechuga:#7a9a4a;
+    --hueso:#f6ecd9;
+    --linea:#4a382c;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(circle at 15% 0%, rgba(226,82,30,0.18), transparent 45%),
+      var(--carbon);
+    font-family:'Courier New', ui-monospace, monospace;
+    color:var(--hueso);
+    display:flex;
+    justify-content:center;
+    padding:32px 16px 60px;
+  }
+  .ticket{
+    width:100%;
+    max-width:420px;
+  }
+  .encabezado{
+    text-align:center;
+    margin-bottom:28px;
+  }
+  .encabezado .emoji{
+    font-size:44px;
+    display:block;
+    margin-bottom:6px;
+  }
+  .encabezado h1{
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size:26px;
+    letter-spacing:0.5px;
+    margin:0 0 4px;
+    color:var(--mostaza);
+  }
+  .encabezado p{
+    margin:0;
+    font-size:12px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    color:#b8a48f;
+  }
+  .panel{
+    background:var(--carbon-2);
+    border:1px solid var(--linea);
+    border-radius:4px;
+    padding:24px;
+    position:relative;
+  }
+  .panel::before,
+  .panel::after{
+    content:"";
+    position:absolute;
+    left:16px; right:16px;
+    height:1px;
+    background:repeating-linear-gradient(90deg, var(--linea) 0 6px, transparent 6px 12px);
+  }
+  .panel::before{ top:-1px; }
+  .panel::after{ bottom:-1px; }
+
+  label{
+    display:block;
+    font-size:11px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:var(--mostaza);
+    margin:18px 0 6px;
+  }
+  label:first-of-type{ margin-top:0; }
+  input{
+    width:100%;
+    background:var(--carbon);
+    border:1px solid var(--linea);
+    border-radius:3px;
+    padding:11px 12px;
+    font-family:inherit;
+    font-size:15px;
+    color:var(--hueso);
+  }
+  input:focus{
+    outline:none;
+    border-color:var(--brasa);
+  }
+  input::placeholder{ color:#6b5847; }
+
+  button{
+    width:100%;
+    margin-top:24px;
+    padding:14px;
+    border:none;
+    border-radius:3px;
+    background:var(--brasa);
+    color:var(--carbon);
+    font-family:inherit;
+    font-weight:bold;
+    font-size:14px;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    cursor:pointer;
+    transition:transform 0.08s ease, background 0.15s ease;
+  }
+  button:hover{ background:#f06a34; }
+  button:active{ transform:scale(0.98); }
+  button:disabled{ opacity:0.5; cursor:default; }
+
+  .mensaje{
+    margin-top:16px;
+    font-size:13px;
+    text-align:center;
+    min-height:18px;
+  }
+  .mensaje.ok{ color:var(--lechuga); }
+  .mensaje.error{ color:var(--brasa); }
+
+  .total{
+    margin-top:22px;
+    text-align:center;
+    padding-top:18px;
+    border-top:1px dashed var(--linea);
+  }
+  .total .num{
+    font-family: Georgia, serif;
+    font-size:38px;
+    color:var(--mostaza);
+    line-height:1;
+  }
+  .total .label{
+    font-size:11px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:#b8a48f;
+    margin-top:4px;
+  }
+
+  .config{
+    margin-top:18px;
+    font-size:11px;
+    color:#6b5847;
+    text-align:center;
+  }
+</style>
+</head>
+<body>
+<div class="ticket">
+  <div class="encabezado">
+    <span class="emoji">🍔</span>
+    <h1>Hamburgueseada a Beneficio</h1>
+    <p>Cargá tu venta</p>
+  </div>
+
+  <div class="panel">
+    <label for="vendedor">Tu nombre</label>
+    <input id="vendedor" type="text" placeholder="Ej: Raul" autocomplete="off">
+
+    <label for="comprador">Se la vendiste a</label>
+    <input id="comprador" type="text" placeholder="Ej: Juan" autocomplete="off">
+
+    <label for="cantidad">Cuántas hamburguesas</label>
+    <input id="cantidad" type="number" min="1" step="1" placeholder="Ej: 5" autocomplete="off">
+
+    <button id="btnEnviar" onclick="enviarVenta()">Cargar venta</button>
+
+    <div id="mensaje" class="mensaje"></div>
+
+    <div class="total">
+      <div class="num" id="totalNum">—</div>
+      <div class="label">hamburguesas vendidas en total</div>
+    </div>
+  </div>
+
+  <div class="config">
+    Conectado a la planilla de la hamburgueseada
+  </div>
+</div>
+
+<script>
+  // Pegá acá la URL que te dio Apps Script al implementar (paso 8 de las instrucciones)
+  const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbxaC4h4YLGkPumV0UtIe3NitixSJ3U7B0WVOqLwWrrQ0qwY13OzXvc6_SzQY8e5Mjo3sw/exec";
+
+  async function cargarTotal() {
+    if (URL_SCRIPT.includes("PEGAR_URL_AQUI")) return;
+    try {
+      const resp = await fetch(URL_SCRIPT);
+      const datos = await resp.json();
+      if (datos.ok) {
+        document.getElementById('totalNum').textContent = datos.total;
+      }
+    } catch (e) {
+      // silencioso, no molestamos al usuario si falla la lectura del total
+    }
+  }
+
+  async function enviarVenta() {
+    const vendedor = document.getElementById('vendedor').value.trim();
+    const comprador = document.getElementById('comprador').value.trim();
+    const cantidad = document.getElementById('cantidad').value;
+    const mensaje = document.getElementById('mensaje');
+    const boton = document.getElementById('btnEnviar');
+
+    mensaje.textContent = '';
+    mensaje.className = 'mensaje';
+
+    if (!vendedor || !comprador || !cantidad || Number(cantidad) <= 0) {
+      mensaje.textContent = 'Completá tu nombre, el comprador y una cantidad válida.';
+      mensaje.className = 'mensaje error';
+      return;
+    }
+
+    if (URL_SCRIPT.includes("PEGAR_URL_AQUI")) {
+      mensaje.textContent = 'Falta configurar la URL del script (mirá el comentario en el código).';
+      mensaje.className = 'mensaje error';
+      return;
+    }
+
+    boton.disabled = true;
+    boton.textContent = 'Cargando...';
+
+    try {
+      const resp = await fetch(URL_SCRIPT, {
+        method: 'POST',
+        // text/plain evita el preflight de CORS que Apps Script no maneja bien
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ vendedor, comprador, cantidad: Number(cantidad) })
+      });
+      const datos = await resp.json();
+
+      if (datos.ok) {
+        mensaje.textContent = `¡Cargado! ${vendedor} le vendió ${cantidad} a ${comprador}.`;
+        mensaje.className = 'mensaje ok';
+        document.getElementById('totalNum').textContent = datos.total;
+        document.getElementById('comprador').value = '';
+        document.getElementById('cantidad').value = '';
+      } else {
+        mensaje.textContent = 'Error: ' + (datos.error || 'no se pudo guardar.');
+        mensaje.className = 'mensaje error';
+      }
+    } catch (e) {
+      mensaje.textContent = 'No se pudo conectar con la planilla.';
+      mensaje.className = 'mensaje error';
+    } finally {
+      boton.disabled = false;
+      boton.textContent = 'Cargar venta';
+    }
+  }
+
+  cargarTotal();
+</script>
+</body>
+</html>
